@@ -14,6 +14,8 @@ import os
 
 from MyPackages.Commons import *
 
+from selenium.webdriver.common.action_chains import ActionChains
+
 class Seleniumer:
     def __init__(self):
 
@@ -29,6 +31,8 @@ class Seleniumer:
 
         self.setDisplayPosition()
 
+        self.windowMain=None
+        self.windowChild=None
 
         return
 
@@ -48,8 +52,6 @@ class Seleniumer:
 
 
     def getAlwaysItems(self):
-        self.getHomePage()
-        self.waitRandom()
         courseTypeList=self.getElems(cssSelect.courseTypeList)
         courseTypes=courseTypeList[0].find_elements_by_tag_name("li")
         courseTypes[2].click()
@@ -59,14 +61,29 @@ class Seleniumer:
         return simpleCards
 
     def randomViewAlways(self):
-        alwaysItem=self.getAlwaysItems()
-        itemLength=len(alwaysItem)
-        point=random.randint(0,itemLength-1)
-        alwaysItem[point].click()
+        self.getHomePage()
         self.waitRandom()
 
-        self.clickViewButton()
-        self.startMovie()
+        alwaysItem=self.getAlwaysItems()
+        itemLength=len(alwaysItem)
+
+        while True:
+            point=random.randint(0,itemLength-1)
+            alwaysItem[point].click()
+            self.waitRandom()
+
+            self.clickViewButton()
+
+            self.startMovie()
+            self.waitCloseChild()
+            self.switchParent()
+
+            self.closePopUp()
+
+    def closePopUp(self):
+        popup = self.driver.find_element_by_css_selector(".v--modal-box.v--modal")
+        img=popup.find_element_by_tag_name("img")
+        img.click()
 
     def clickViewButton(self):
         buttons=self.driver.find_elements_by_tag_name("button")
@@ -81,6 +98,10 @@ class Seleniumer:
 
     def startMovie(self):
         # todo click start
+
+        self.switchMove()
+
+        ActionChains(self.driver).move_by_offset(100, 100).click().perform()
 
         # todo if finish,click next button.
         return
@@ -101,8 +122,39 @@ class Seleniumer:
     def waitRandom(self):
         time.sleep(random.randint(1,5))
 
+    def switchMove(self):
+        if self.windowChild is not None:
+            print("already moved to child.")
+
+        self.windowMain=self.driver.window_handles[0]
+        if len(self.driver.window_handles)<2:
+            print("not found child window.")
+            return
+
+        for handle in  self.driver.window_handles:
+            self.driver.switch_to.window(handle)
+            if "/moveie/" in self.driver.current_url:
+                self.windowChild=handle
+                break
+
+
+    def switchParent(self):
+        self.driver.switch_to.window(self.windowMain)
+        self.windowMain=None
+        self.windowChild=None
+
+    def waitCloseChild(self):
+        while len(self.driver.window_handles)>1:
+            time.sleep(10)
+            print("waiting close child.")
+        return
+
+    def waitUser(self):
+        input("do any.")
 
 if __name__ == '__main__':
     sier=Seleniumer()
+    # sier.waitUser()
+    # sier.startMovie()
     sier.randomViewAlways()
     input("wait finish")
